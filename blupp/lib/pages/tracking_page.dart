@@ -8,57 +8,43 @@ class TrackingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer<FinancialDataService>(
-        builder: (context, finance, child) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  "Recent Transactions",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: finance.transactions.length,
-                  itemBuilder: (context, index) {
-                    final transaction = finance.transactions[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: transaction.category == 'Income' ? Colors.green.shade100 : Colors.red.shade100,
-                        child: Icon(transaction.category == 'Income' ? Icons.add : Icons.remove, color: transaction.category == 'Income' ? Colors.green : Colors.red),
-                      ),
-                      title: Text(transaction.title),
-                      subtitle: Text("${transaction.date.toLocal()}".split(' ')[0]),
-                      trailing: Text(
-                        "${transaction.category == 'Income' ? '+' : '-'} \$${transaction.amount.toStringAsFixed(2)}",
-                        style: TextStyle(
-                          color: transaction.category == 'Income' ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: const TabBar(tabs: [Tab(text: 'Expense'), Tab(text: 'Income')]),
+        body: Consumer<FinancialDataService>(
+          builder: (context, finance, child) {
+            return TabBarView(
+              children: [
+                _buildTransactionList(finance.transactions.where((t) => t.type == 'Expense').toList()),
+                _buildTransactionList(finance.transactions.where((t) => t.type == 'Income').toList()),
+              ],
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _addTransaction(context),
+          child: const Icon(Icons.add),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addTransaction(context),
-        child: const Icon(Icons.add),
-      ),
+    );
+  }
+
+  Widget _buildTransactionList(List<Transaction> transactions) {
+    return ListView.builder(
+      itemCount: transactions.length,
+      itemBuilder: (context, index) {
+        final t = transactions[index];
+        return ListTile(title: Text(t.title), subtitle: Text(t.category), trailing: Text('\$${t.amount.toStringAsFixed(2)}'));
+      },
     );
   }
 
   void _addTransaction(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
-    String category = 'Expense';
+    String category = 'food';
+    String type = 'Expense';
 
     showDialog(
       context: context,
@@ -72,8 +58,14 @@ class TrackingPage extends StatelessWidget {
               TextField(controller: amountController, decoration: const InputDecoration(labelText: 'Amount'), keyboardType: TextInputType.number),
               DropdownButton<String>(
                 value: category,
-                items: ['Income', 'Expense'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                items: ['food', 'mobile', 'grocery', 'transport', 'leisure', 'study expense', 'emergency', 'income', 'job', 'parents money']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (val) => setState(() => category = val!),
+              ),
+              DropdownButton<String>(
+                value: type,
+                items: ['Income', 'Expense'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: (val) => setState(() => type = val!),
               ),
             ],
           ),
@@ -87,6 +79,7 @@ class TrackingPage extends StatelessWidget {
                   amount: double.parse(amountController.text),
                   date: DateTime.now(),
                   category: category,
+                  type: type,
                 );
                 Provider.of<FinancialDataService>(context, listen: false).addTransaction(transaction);
                 Navigator.pop(context);
@@ -99,3 +92,4 @@ class TrackingPage extends StatelessWidget {
     );
   }
 }
+

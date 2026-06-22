@@ -6,55 +6,38 @@ class AnalyticsPage extends StatelessWidget {
   const AnalyticsPage({super.key});
 
   String _getAiAdvice(FinancialDataService finance) {
-    if (finance.spendingBalance > finance.totalFund * 0.5) {
-      return "Your spending is quite high. Try to cut down on unnecessary expenses.";
-    } else if (finance.savings < finance.totalFund * 0.2) {
-      return "Consider increasing your savings rate for better financial security.";
+    // Replaced removed properties with new ones
+    if (finance.totalBankBalance > 1000) { 
+      return "Your bank balance is looking healthy!";
+    } else if (finance.netWorth < 0) {
+      return "Your net worth is negative. Consider reviewing your loans.";
     }
-    return "Your finances look healthy! Keep up the good work.";
+    return "Your finances look steady. Keep tracking!";
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
+        final totalExpense = finance.transactions.where((t) => t.type == 'Expense').fold(0.0, (sum, t) => sum + t.amount);
+        final totalIncome = finance.transactions.where((t) => t.type == 'Income').fold(0.0, (sum, t) => sum + t.amount);
+        final balanceLeft = (totalIncome - totalExpense);
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Card(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.psychology, size: 40, color: Colors.blue),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("AI Financial Advisor", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                            const SizedBox(height: 4),
-                            Text(_getAiAdvice(finance), style: const TextStyle(fontSize: 14)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text("Spending Analytics", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              _buildStatCard("Spending Balance Left", "\$${balanceLeft.toStringAsFixed(2)}", Icons.trending_up, Colors.red),
               const SizedBox(height: 16),
-              _buildStatCard("Spending Balance", "\$${finance.spendingBalance.toStringAsFixed(2)}", Icons.trending_up, Colors.red),
-              const SizedBox(height: 16),
-              _buildStatCard("Total Savings", "\$${finance.savings.toStringAsFixed(2)}", Icons.account_balance_wallet, Colors.teal),
+              _buildStatCard("Total Savings Left", "\$${balanceLeft.toStringAsFixed(2)}", Icons.account_balance_wallet, Colors.teal),
               const SizedBox(height: 24),
               const Text("Category Breakdown", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              _buildSimpleChart(),
+              ...finance.transactions.where((t) => t.type == 'Expense').map((t) => AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                child: ListTile(leading: const Icon(Icons.category), title: Text(t.category), trailing: Text('\$${t.amount.toStringAsFixed(2)}')),
+              )),
             ],
           ),
         );
@@ -85,49 +68,5 @@ class AnalyticsPage extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildSimpleChart() {
-    return Column(
-      children: [
-        _buildChartBar("Housing", 0.4),
-        _buildChartBar("Food", 0.25),
-        _buildChartBar("Transport", 0.15),
-        _buildChartBar("Others", 0.2),
-      ],
-    );
-  }
-
-  Widget _buildChartBar(String label, double percent) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label),
-          const SizedBox(height: 4),
-          Stack(
-            children: [
-              Container(
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: percent,
-                child: Container(
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.teal,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
+

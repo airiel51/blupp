@@ -13,7 +13,8 @@ class CombinedTrackingPage extends StatefulWidget {
 class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
-  String _category = 'Expense'; // Default category
+  String _category = 'food';
+  String _type = 'Expense';
 
   void _addTransaction(BuildContext context) {
     final title = _titleController.text;
@@ -26,6 +27,7 @@ class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
         amount: amount,
         date: DateTime.now(),
         category: _category,
+        type: _type,
       );
       Provider.of<FinancialDataService>(context, listen: false).addTransaction(transaction);
       _titleController.clear();
@@ -46,6 +48,12 @@ class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
               DropdownButton<String>(
                 value: _category,
                 onChanged: (value) => setState(() => _category = value!),
+                items: ['food', 'mobile', 'grocery', 'transport', 'leisure', 'study expense', 'emergency', 'income', 'job', 'parents money']
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              ),
+              DropdownButton<String>(
+                value: _type,
+                onChanged: (value) => setState(() => _type = value!),
                 items: ['Income', 'Expense'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               ),
               ElevatedButton(onPressed: () => _addTransaction(context), child: const Text('Add Transaction')),
@@ -54,7 +62,7 @@ class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
                   itemCount: finance.transactions.length,
                   itemBuilder: (context, index) {
                     final tx = finance.transactions[index];
-                    return ListTile(title: Text(tx.title), trailing: Text('${tx.category == 'Income' ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}'));
+                    return ListTile(title: Text(tx.title), subtitle: Text(tx.category), trailing: Text('${tx.type == 'Income' ? '+' : '-'}\$${tx.amount.toStringAsFixed(2)}'));
                   },
                 ),
               ),

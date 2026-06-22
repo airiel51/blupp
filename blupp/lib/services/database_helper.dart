@@ -16,12 +16,45 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
+    print('DEBUG: Database path: $path');
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
-      version: 1,
+      version: 4,
       onCreate: _createDB,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        print('Upgrading database from $oldVersion to $newVersion');
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE bank_accounts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT,
+              balance REAL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE loans (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT,
+              amount REAL,
+              type TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE transactions (
+              id TEXT PRIMARY KEY,
+              title TEXT,
+              amount REAL,
+              date TEXT,
+              category TEXT,
+              type TEXT
+            )
+          ''');
+        }
+      },
     );
+    print('Database version: ${await db.getVersion()}');
+    return db;
   }
 
   Future _createDB(Database db, int version) async {
@@ -30,6 +63,31 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE,
         password TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE bank_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        balance REAL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE loans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        amount REAL,
+        type TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE transactions (
+        id TEXT PRIMARY KEY,
+        title TEXT,
+        amount REAL,
+        date TEXT,
+        category TEXT,
+        type TEXT
       )
     ''');
   }

@@ -36,17 +36,70 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Scaffold(
+          body: ListView(
+            padding: const EdgeInsets.all(16.0),
             children: [
               const Text('Total Net Worth', style: TextStyle(fontSize: 16, color: Colors.grey), textAlign: TextAlign.center),
-              Text('\$${finance.totalFund.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.pink), textAlign: TextAlign.center),
+              Text('\$${finance.netWorth.toStringAsFixed(2)}', style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.pink), textAlign: TextAlign.center),
               const SizedBox(height: 32),
-              _buildCategoryCard(context, 'Spending Balance', finance.spendingBalance, (val) => finance.updateCategories(val, finance.investment, finance.savings)),
-              _buildCategoryCard(context, 'Investment', finance.investment, (val) => finance.updateCategories(finance.spendingBalance, val, finance.savings)),
-              _buildCategoryCard(context, 'Savings', finance.savings, (val) => finance.updateCategories(finance.spendingBalance, finance.investment, val)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Bank Accounts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => finance.loadData(),
+                  ),
+                ],
+              ),
+              if (finance.bankAccounts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text('No bank accounts added yet.', style: TextStyle(color: Colors.grey)),
+                ),
+              ...finance.bankAccounts.map((account) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.account_balance, color: Colors.blue),
+                  title: Text(account.name),
+                  trailing: Text('\$${account.balance.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              )),
+              const SizedBox(height: 24),
+              const Text('Loans', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              if (finance.loans.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text('No loans added yet.', style: TextStyle(color: Colors.grey)),
+                ),
+              ...finance.loans.map((loan) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.money_off, color: Colors.red),
+                  title: Text(loan.name),
+                  subtitle: Text(loan.type),
+                  trailing: Text('-\$${loan.amount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                ),
+              )),
+            ],
+          ),
+          floatingActionButton: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              FloatingActionButton.extended(
+                heroTag: 'addBank',
+                onPressed: () => _addEntry(context, 'Bank Account', (name, amount, val) => finance.addBankAccount(name, amount)),
+                label: const Text('Bank'),
+                icon: const Icon(Icons.add),
+              ),
+              const SizedBox(height: 12),
+              FloatingActionButton.extended(
+                heroTag: 'addLoan',
+                onPressed: () => _addEntry(context, 'Loan', (name, amount, val) => finance.addLoan(name, amount, val!)),
+                label: const Text('Loan'),
+                icon: const Icon(Icons.remove),
+                backgroundColor: Colors.red.shade100,
+                foregroundColor: Colors.red,
+              ),
             ],
           ),
         );
@@ -54,18 +107,54 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryCard(BuildContext context, String title, double value, Function(double) onEdit) {
-    return Card(
-      child: ListTile(
-        title: Text(title),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('\$${value.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            IconButton(icon: const Icon(Icons.edit), onPressed: () => _editBalance(context, title, value, onEdit)),
+  Future<void> _addEntry(BuildContext context, String title, Future<void> Function(String, double, String?) onSave) async {
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    String? entryType = title == 'Loan' ? 'Personal' : null;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Add $title'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name (e.g. Maybank, ShopeePay)')),
+              TextField(controller: amountController, decoration: const InputDecoration(labelText: 'Amount'), keyboardType: TextInputType.number),
+              if (title == 'Loan')
+                DropdownButton<String>(
+                  isExpanded: true,
+                  value: entryType,
+                  items: ['Personal', 'ShopeePay', 'Transport'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (val) => setState(() => entryType = val),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountController.text) ?? 0.0;
+                if (nameController.text.isNotEmpty && amount > 0) {
+                  print('DEBUG: Saving entry $title');
+                  await onSave(nameController.text, amount, entryType);
+                  print('DEBUG: Saved entry $title');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$title "${nameController.text}" added!')),
+                    );
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
     );
   }
+
+
 }
