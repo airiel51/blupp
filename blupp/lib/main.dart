@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'pages/planning_page.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/combined_tracking_page.dart';
 import 'pages/analytics_page.dart';
@@ -68,12 +69,14 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = [
     const DashboardPage(),
     const CombinedTrackingPage(),
+    const PlanningPage(),
     const AnalyticsPage(),
   ];
 
   final List<String> _titles = [
     'Blupp Dashboard',
     'Tracking & Budget',
+    'Planning',
     'Analytics',
   ];
 
@@ -92,15 +95,30 @@ class _MainScreenState extends State<MainScreen> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await Provider.of<AuthService>(context, listen: false).logout();
+            },
+          ),
+        ],
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: _pages[_selectedIndex],
+            Column(
+              children: [
+                Expanded(
+                  child: _pages[_selectedIndex],
+                ),
+              ],
             ),
-            // The Advice Widget stays on every page at the bottom
-            const FinancialAdviceWidget(),
+            const Positioned(
+              right: 16,
+              bottom: 16,
+              child: FinancialAdviceWidget(),
+            ),
           ],
         ),
       ),
@@ -114,6 +132,7 @@ class _MainScreenState extends State<MainScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Tracking'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Planning'),
           BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytics'),
         ],
       ),

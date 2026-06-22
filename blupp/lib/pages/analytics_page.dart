@@ -19,25 +19,51 @@ class AnalyticsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
-        final totalExpense = finance.transactions.where((t) => t.type == 'Expense').fold(0.0, (sum, t) => sum + t.amount);
-        final totalIncome = finance.transactions.where((t) => t.type == 'Income').fold(0.0, (sum, t) => sum + t.amount);
-        final balanceLeft = (totalIncome - totalExpense);
+        final expenses = finance.transactions.where((t) => t.type == 'Expense').toList();
+        final totalExpense = expenses.fold(0.0, (sum, t) => sum + t.amount);
+        
+        // Group expenses by category
+        final Map<String, double> categoryMap = {};
+        for (var t in expenses) {
+          categoryMap[t.category] = (categoryMap[t.category] ?? 0.0) + t.amount;
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildStatCard("Spending Balance Left", "\$${balanceLeft.toStringAsFixed(2)}", Icons.trending_up, Colors.red),
+              _buildStatCard("Total Income", "RM${finance.totalIncome.toStringAsFixed(2)}", Icons.arrow_upward, Colors.green),
               const SizedBox(height: 16),
-              _buildStatCard("Total Savings Left", "\$${balanceLeft.toStringAsFixed(2)}", Icons.account_balance_wallet, Colors.teal),
+              _buildStatCard("Total Expenses", "RM${totalExpense.toStringAsFixed(2)}", Icons.arrow_downward, Colors.red),
               const SizedBox(height: 24),
-              const Text("Category Breakdown", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text("Category Breakdown (Expenses)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              ...finance.transactions.where((t) => t.type == 'Expense').map((t) => AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                child: ListTile(leading: const Icon(Icons.category), title: Text(t.category), trailing: Text('\$${t.amount.toStringAsFixed(2)}')),
-              )),
+              ...categoryMap.entries.map((entry) {
+                final percentage = totalExpense > 0 ? entry.value / totalExpense : 0.0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          Text("RM${entry.value.toStringAsFixed(2)} (${(percentage * 100).toInt()}%)"),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: percentage,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         );
@@ -47,6 +73,7 @@ class AnalyticsPage extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Row(

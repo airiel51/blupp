@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -29,6 +30,20 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
     if (mounted) {
       if (error == null) {
+        try {
+          final user = Supabase.instance.client.auth.currentUser;
+          if (user != null) {
+            await Supabase.instance.client.from('users').insert({
+              'id': user.id,
+              'email': email,
+              // You can add default values for persona/currency here
+              'ai_persona': 'Strict Coach',
+              'base_currency': 'MYR',
+            });
+          }
+        } catch (e) {
+          print("Error creating user profile: $e");
+        }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registered successfully! Please log in.')));
         Navigator.pop(context); // This returns to login page
       } else {

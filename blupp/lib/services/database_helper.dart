@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         print('Upgrading database from $oldVersion to $newVersion');
@@ -58,6 +58,7 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
+    print('DEBUG: onCreate triggered. Creating tables...');
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

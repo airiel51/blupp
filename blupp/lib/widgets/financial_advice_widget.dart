@@ -1,46 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class FinancialAdviceWidget extends StatefulWidget {
+class FinancialAdviceWidget extends StatelessWidget {
   const FinancialAdviceWidget({super.key});
 
   @override
-  State<FinancialAdviceWidget> createState() => _FinancialAdviceWidgetState();
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: () => _showAdviceDialog(context),
+      icon: const Icon(Icons.auto_awesome, color: Colors.teal, size: 32),
+    );
+  }
+
+  void _showAdviceDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AdviceDialog(),
+    );
+  }
 }
 
-class _FinancialAdviceWidgetState extends State<FinancialAdviceWidget> {
-  String _advice = "Tap the refresh icon to ask your Gemini AI coach for advice.";
-  bool _isLoading = false;
-  
-  // This is the exact User ID from the original main.dart
-  final String userId = "0165f8cb-7deb-4dd3-b9b5-59db5e70c2f1"; 
+class AdviceDialog extends StatefulWidget {
+  const AdviceDialog({super.key});
+
+  @override
+  State<AdviceDialog> createState() => _AdviceDialogState();
+}
+
+class _AdviceDialogState extends State<AdviceDialog> {
+  String _advice = "Loading advice...";
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAdvice();
+  }
 
   Future<void> fetchAdvice() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
-      final url = Uri.parse('http://127.0.0.1:8000/api/advice/$userId');
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        setState(() {
+          _advice = "Please log in to get financial advice.";
+          _isLoading = false;
+        });
+        return;
+      }
+    
+      final url = Uri.parse('http://10.0.2.2:8000/api/advice/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
           _advice = data['advice'];
+          _isLoading = false;
         });
       } else {
         setState(() {
           _advice = "Server Error: ${response.statusCode}";
+          _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _advice = "Connection Error: Is your Python server running? ($e)";
-      });
-    } finally {
-      setState(() {
+        _advice = "Connection Error: ($e)";
         _isLoading = false;
       });
     }
@@ -48,74 +75,15 @@ class _FinancialAdviceWidgetState extends State<FinancialAdviceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.teal.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.teal.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: Colors.teal, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                "AI Financial Coach",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              if (_isLoading)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.teal),
-                )
-              else ...[
-                IconButton(
-                  icon: const Icon(Icons.refresh, size: 18, color: Colors.teal),
-                  onPressed: fetchAdvice,
-                  tooltip: 'Refresh Advice',
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.teal),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("AI Consultation feature coming soon!")),
-                    );
-                  },
-                  tooltip: 'Start Consultation',
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _advice,
-            style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
-          ),
-        ],
-      ),
+    return AlertDialog(
+      title: const Text("AI Financial Coach"),
+      content: _isLoading
+          ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+          : SingleChildScrollView(child: Text(_advice)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: fetchAdvice),
+      ],
     );
   }
 }
