@@ -15,8 +15,13 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
+        if (finance.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         final netWorth = finance.netWorth;
 
         return Scaffold(
@@ -24,22 +29,34 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                const Text('Total Net Worth', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                Text('RM${netWorth.toStringAsFixed(2)}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.pink)),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text('Total Net Worth', style: TextStyle(fontSize: 16, color: Colors.white70)),
+                      Text('RM${netWorth.toStringAsFixed(2)}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    Expanded(child: _buildNavCard('Savings', 'RM${finance.savingsBalance.toStringAsFixed(2)}', Icons.savings, Colors.green, () => _navigateToPage(context, 'Savings'))),
+                    Expanded(child: _buildNavCard('Savings', 'RM${finance.savingsBalance.toStringAsFixed(2)}', Icons.savings, theme.colorScheme.tertiary, () => _navigateToPage(context, 'Savings'))),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildNavCard('Spending', 'RM${finance.spendingBalance.toStringAsFixed(2)}', Icons.account_balance_wallet, Colors.orange, () => _navigateToPage(context, 'Spending'))),
+                    Expanded(child: _buildNavCard('Spending', 'RM${finance.spendingBalance.toStringAsFixed(2)}', Icons.account_balance_wallet, theme.colorScheme.secondary, () => _navigateToPage(context, 'Spending'))),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildNavCard('Investment', 'RM${finance.investmentBalance.toStringAsFixed(2)}', Icons.trending_up, Colors.purple, () => _navigateToPage(context, 'Investment'))),
+                    Expanded(child: _buildNavCard('Investment', 'RM${finance.investmentBalance.toStringAsFixed(2)}', Icons.trending_up, theme.colorScheme.primary, () => _navigateToPage(context, 'Investment'))),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildNavCard('Total Spending', 'RM${finance.totalExpense.toStringAsFixed(2)}', Icons.list_alt, Colors.red, () => _navigateToTracking(context))),
+                    Expanded(child: _buildNavCard('Total Spending', 'RM${finance.totalExpense.toStringAsFixed(2)}', Icons.list_alt, theme.colorScheme.error, () => _navigateToTracking(context))),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -55,7 +72,18 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: ListView.builder(
+                  child: finance.bankAccounts.isEmpty 
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.account_balance, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                          const SizedBox(height: 16),
+                          const Text("No bank accounts yet."),
+                          const SizedBox(height: 16),
+                          ElevatedButton(onPressed: () => _showAddAccountDialog(context, finance), child: const Text("Add First Account")),
+                        ],
+                      )
+                    : ListView.builder(
                     itemCount: finance.bankAccounts.length,
                     itemBuilder: (context, index) {
                       final account = finance.bankAccounts[index];

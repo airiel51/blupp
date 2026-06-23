@@ -101,8 +101,13 @@ class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
+        if (finance.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
         return DefaultTabController(
           length: 2,
           child: Scaffold(
@@ -112,17 +117,17 @@ class _CombinedTrackingPageState extends State<CombinedTrackingPage> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _buildSummaryCard('Income', 'RM${finance.totalIncome.toStringAsFixed(2)}', Colors.green)),
+                      Expanded(child: _buildSummaryCard('Income', 'RM${finance.totalIncome.toStringAsFixed(2)}', theme.colorScheme.tertiary)),
                       const SizedBox(width: 16),
-                      Expanded(child: _buildSummaryCard('Expenses', 'RM${finance.totalExpense.toStringAsFixed(2)}', Colors.red)),
+                      Expanded(child: _buildSummaryCard('Expenses', 'RM${finance.totalExpense.toStringAsFixed(2)}', theme.colorScheme.error)),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const TabBar(
-                    labelColor: Colors.pink,
+                  TabBar(
+                    labelColor: theme.colorScheme.primary,
                     unselectedLabelColor: Colors.grey,
-                    indicatorColor: Colors.pink,
-                    tabs: [
+                    indicatorColor: theme.colorScheme.primary,
+                    tabs: const [
                       Tab(text: 'Income'),
                       Tab(text: 'Expense'),
                     ],

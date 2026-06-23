@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../services/financial_data_service.dart';
 
 class AnalyticsPage extends StatelessWidget {
   const AnalyticsPage({super.key});
 
-  String _getAiAdvice(FinancialDataService finance) {
-    // Replaced removed properties with new ones
-    if (finance.totalBankBalance > 1000) { 
-      return "Your bank balance is looking healthy!";
-    } else if (finance.netWorth < 0) {
-      return "Your net worth is negative. Consider reviewing your loans.";
-    }
-    return "Your finances look steady. Keep tracking!";
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<FinancialDataService>(
       builder: (context, finance, child) {
+        if (finance.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
         final expenses = finance.transactions.where((t) => t.type == 'Expense').toList();
         final totalExpense = expenses.fold(0.0, (sum, t) => sum + t.amount);
+        
+        if (expenses.isEmpty) {
+          return const Center(child: Text("No expense data available."));
+        }
         
         // Group expenses by category
         final Map<String, double> categoryMap = {};
@@ -39,26 +38,44 @@ class AnalyticsPage extends StatelessWidget {
               const SizedBox(height: 24),
               const Text("Category Breakdown (Expenses)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
+              
+              // Pie Chart
+              SizedBox(
+                height: 250,
+                child: PieChart(
+                  PieChartData(
+                    sections: categoryMap.entries.map((entry) {
+                      final index = categoryMap.keys.toList().indexOf(entry.key);
+                      final colors = [Colors.pink, Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.teal];
+                      return PieChartSectionData(
+                        value: entry.value,
+                        title: '${(entry.value / totalExpense * 100).toInt()}%',
+                        color: colors[index % colors.length],
+                        radius: 50,
+                        titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               ...categoryMap.entries.map((entry) {
                 final percentage = totalExpense > 0 ? entry.value / totalExpense : 0.0;
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
-                          Text("RM${entry.value.toStringAsFixed(2)} (${(percentage * 100).toInt()}%)"),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      LinearProgressIndicator(
-                        value: percentage,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.pinkAccent),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
+                      Container(width: 16, height: 16, color: Colors.pink),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
+                            Text("RM${entry.value.toStringAsFixed(2)} (${(percentage * 100).toInt()}%)"),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -96,4 +113,3 @@ class AnalyticsPage extends StatelessWidget {
     );
   }
 }
-

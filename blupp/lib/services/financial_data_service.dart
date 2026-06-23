@@ -93,12 +93,14 @@ class FinancialDataService extends ChangeNotifier {
   List<Loan> _loans = [];
   List<Transaction> _transactions = [];
   List<PlannedExpense> _plannedExpenses = [];
+  bool _isLoading = false;
   final _supabase = Supabase.instance.client;
 
   FinancialDataService() {
     loadData();
   }
 
+  bool get isLoading => _isLoading;
   List<BankAccount> get bankAccounts => _bankAccounts;
   List<Loan> get loans => _loans;
   List<Transaction> get transactions => _transactions;
@@ -123,6 +125,8 @@ class FinancialDataService extends ChangeNotifier {
     }
 
     print('DEBUG: loadData - Fetching for user: $userId');
+    _isLoading = true;
+    notifyListeners();
 
     try {
       final bankRes = await _supabase.from('bank_accounts').select('*').eq('user_id', userId);
@@ -150,9 +154,10 @@ class FinancialDataService extends ChangeNotifier {
       
     } catch (e) {
       print('DEBUG: loadData - Error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    
-    notifyListeners();
   }
 
   Future<void> addTransaction(Transaction transaction) async {
@@ -167,10 +172,15 @@ class FinancialDataService extends ChangeNotifier {
       'user_id': userId,
     });
 
-    // Update bank balance if it's an income transaction
-    if (transaction.type == 'Income' && transaction.bankAccountId != null) {
+    // Update bank balance based on transaction type
+    if (transaction.bankAccountId != null) {
       final bankAccount = _bankAccounts.firstWhere((a) => a.id == transaction.bankAccountId);
-      final newBalance = bankAccount.balance + transaction.amount;
+      double newBalance;
+      if (transaction.type == 'Income') {
+        newBalance = bankAccount.balance + transaction.amount;
+      } else {
+        newBalance = bankAccount.balance - transaction.amount;
+      }
       await updateBankAccount(transaction.bankAccountId!, newBalance);
     }
     
